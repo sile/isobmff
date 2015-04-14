@@ -4,6 +4,7 @@ import Data.ByteString.Lazy as BL
 import Data.ByteString.Char8 as Char8
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.Word
 
 type BoxType = String
 type Body = BL.ByteString
@@ -17,6 +18,10 @@ class Box a where
 
 --  getChildren :: a -> b
 --  getChildren _ = []
+
+--class (Box a) => FullBox a where
+--  getVersion :: a -> Word8
+--  getFlags   :: a -> Word32
 
 decodeBox :: (Box b) => Bytes -> (b, Bytes) -- TODO: handle partial
 decodeBox input =
@@ -55,3 +60,26 @@ encodeAll boxes = runPut $ encode boxes
         encode (b:bs) = do
           putLazyByteString $ encodeBox b
           encode bs
+
+getFlagsInternal :: Get Word32
+getFlagsInternal = do
+  high <- getWord8
+  mid <- getWord8
+  low <- getWord8
+  return $ makeFlags (fromIntegral high) (fromIntegral mid) (fromIntegral low)
+
+makeFlags :: Word32 -> Word32 -> Word32 -> Word32
+makeFlags high mid low = high * 0x10000 + mid * 0x100 + low
+
+getFullBoxHeader :: Get (Word8, Word32)
+getFullBoxHeader = do
+  version <- getWord8
+  flags <- getFlagsInternal
+  return $ (version, flags)
+
+putFullBoxHeader :: Word8 -> Word32 -> Put
+putFullBoxHeader version flags = do
+  putWord8 version
+  putWord8 $ fromIntegral flags `div` 0x10000
+  putWord8 $ fromIntegral flags `div` 0x100
+  putWord8 $ fromIntegral flags

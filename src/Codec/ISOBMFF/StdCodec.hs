@@ -8,6 +8,7 @@ import Codec.ISOBMFF.Box.FileTypeBox
 import Codec.ISOBMFF.Box.FreeSpaceBox
 import Codec.ISOBMFF.Box.MediaDataBox
 import Codec.ISOBMFF.Box.MovieBox
+import Codec.ISOBMFF.Box.MovieHeaderBox
 
 import Data.ByteString.Lazy as BL
 
@@ -17,6 +18,7 @@ data StdBox = Unknown UnknownBox
             | Skip FreeSpaceBox
             | Mdat MediaDataBox
             | Moov (MovieBox StdBox)
+            | Mvhd MovieHeaderBox
             deriving (Show)
 
 -- XXX: too redundant code
@@ -27,6 +29,7 @@ instance Box StdBox where
   makeBox t @ "skip" b = Skip $ makeBox t b
   makeBox t @ "mdat" b = Mdat $ makeBox t b
   makeBox t @ "moov" b = Moov $ makeBox t b
+  makeBox t @ "mvhd" b = Mvhd $ makeBox t b
   makeBox t          b = Unknown $ makeBox t b
 
   getType (Ftyp x) = getType x
@@ -34,6 +37,7 @@ instance Box StdBox where
   getType (Skip x) = getType x
   getType (Mdat x) = getType x
   getType (Moov x) = getType x
+  getType (Mvhd x) = getType x
   getType (Unknown x) = getType x
 
   getBody (Ftyp x) = getBody x
@@ -41,6 +45,7 @@ instance Box StdBox where
   getBody (Skip x) = getBody x
   getBody (Mdat x) = getBody x
   getBody (Moov x) = getBody x
+  getBody (Mvhd x) = getBody x
   getBody (Unknown x) = getBody x
 
 getChildren (Moov x) = Codec.ISOBMFF.Box.MovieBox.getChildren x
