@@ -1,5 +1,6 @@
 module Codec.ISOBMFF where
 
+import Data.ByteString as B
 import Data.ByteString.Lazy as BL
 import Data.ByteString.Char8 as Char8
 import Data.Binary.Get
@@ -9,6 +10,7 @@ import Data.Word
 type BoxType = String
 type Body = BL.ByteString
 type Bytes = BL.ByteString
+type SBytes = B.ByteString
 
 class Box a where
   makeBox :: BoxType -> Body -> a
@@ -28,9 +30,15 @@ decodeBox input =
   let (box, rest, _) = runGetState decode input 0
   in (box, rest)
   where decode = do
-          boxSize <- getWord32be -- TODO: 1, 0
+          boxSize <- getWord32be
           boxType <- getByteString 4 -- TODO: uuid
-          body    <- getLazyByteString (fromIntegral boxSize-8)
+          body <-
+            case boxSize of
+              0 -> getRemainingLazyByteString
+              1 -> do
+                boxSize <- getWord64be
+                getLazyByteString (fromIntegral boxSize-16)
+              _ -> getLazyByteString (fromIntegral boxSize-8)
           return $ makeBox (Char8.unpack boxType) body
 
 encodeBox :: (Box b) => b -> Bytes
