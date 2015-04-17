@@ -17,7 +17,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules: Codec.ISOBMFF4, Codec.ISOBMFF.StdBox
+  exposed-modules: Codec.ISOBMFF, Codec.ISOBMFF.StdBox
 
   -- other-modules:
   -- other-extensions:

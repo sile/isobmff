@@ -1,93 +1,34 @@
+{-# LANGUAGE TypeFamilies #-}
 module Codec.ISOBMFF where
 
-import Data.ByteString as B
 import Data.ByteString.Lazy as BL
-import Data.ByteString.Char8 as Char8
-import Data.Binary.Get
-import Data.Binary.Put
-import Data.Word
+import Data.Binary (Binary, put)
+import Data.Binary.Put (runPut)
+import Data.Word (Word8, Word32, Word64)
 
 type BoxType = String
-type Body = BL.ByteString
+type BoxBody = BL.ByteString
+type BoxSize = Word64
+type BoxVersion = Word8
+type BoxFlags = Word32
 type Bytes = BL.ByteString
-type SBytes = B.ByteString
 
 class Box a where
-  makeBox :: BoxType -> Body -> a
+  type Child a
 
   getType :: a -> BoxType
-  getBody :: a -> Body
 
---  getChildren :: a -> b
---  getChildren _ = []
+  getSize :: (Binary a) => a -> BoxSize
+  getSize = fromIntegral . BL.length . runPut . put
 
---class (Box a) => FullBox a where
---  getVersion :: a -> Word8
---  getFlags   :: a -> Word32
+  decodeBody :: BoxType -> BoxBody -> a
+  encodeBody :: a -> BoxBody
 
-decodeBox :: (Box b) => Bytes -> (b, Bytes) -- TODO: handle partial
-decodeBox input =
-  let (box, rest, _) = runGetState decode input 0
-  in (box, rest)
-  where decode = do
-          boxSize <- getWord32be
-          boxType <- getByteString 4 -- TODO: uuid
-          body <-
-            case boxSize of
-              0 -> getRemainingLazyByteString
-              1 -> do
-                boxSize <- getWord64be
-                getLazyByteString (fromIntegral boxSize-16)
-              _ -> getLazyByteString (fromIntegral boxSize-8)
-          return $ makeBox (Char8.unpack boxType) body
+  getChildren :: a -> BoxList (Child a)
+  getChildren _ = BoxList []
 
-encodeBox :: (Box b) => b -> Bytes
-encodeBox box = runPut $ do
-  let boxType = Char8.pack $ getType box
-  let boxBody = getBody box
-  let boxSize = 4 + 4 + BL.length boxBody
-  putWord32be $ fromIntegral boxSize
-  putByteString boxType
-  putLazyByteString boxBody
+class FullBox a where
+  getVersion :: a -> BoxVersion
+  getFlags   :: a -> BoxFlags
 
-decodeAll :: (Box b) => Bytes -> [b] -- TODO: handle partial
-decodeAll input =
-  if BL.null input
-  then []
-  else let (box, input') = decodeBox input
-       in box : decodeAll input'
-
-decodeFile ::(Box b) => FilePath -> IO [b]
-decodeFile path = do
-  input <- BL.readFile path
-  return $ decodeAll input
-
-encodeAll :: (Box a) => [a] -> Bytes
-encodeAll boxes = runPut $ encode boxes
-  where encode []     = do return ()
-        encode (b:bs) = do
-          putLazyByteString $ encodeBox b
-          encode bs
-
-getFlagsInternal :: Get Word32
-getFlagsInternal = do
-  high <- getWord8
-  mid <- getWord8
-  low <- getWord8
-  return $ makeFlags (fromIntegral high) (fromIntegral mid) (fromIntegral low)
-
-makeFlags :: Word32 -> Word32 -> Word32 -> Word32
-makeFlags high mid low = high * 0x10000 + mid * 0x100 + low
-
-getFullBoxHeader :: Get (Word8, Word32)
-getFullBoxHeader = do
-  version <- getWord8
-  flags <- getFlagsInternal
-  return $ (version, flags)
-
-putFullBoxHeader :: Word8 -> Word32 -> Put
-putFullBoxHeader version flags = do
-  putWord8 version
-  putWord8 $ fromIntegral flags `div` 0x10000
-  putWord8 $ fromIntegral flags `div` 0x100
-  putWord8 $ fromIntegral flags
+data BoxList a = BoxList [a] deriving (Show)

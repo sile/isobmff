@@ -1,11 +1,14 @@
 module Codec.ISOBMFF.BoxUtil where
 
-import Codec.ISOBMFF4
+import Codec.ISOBMFF
 import Data.Binary (Binary)
 import Data.Binary.Put as Put
 import Data.Binary.Get as Get
 import Data.ByteString.Lazy as BL
 import Data.ByteString.Char8 as Char8
+
+putBox2 :: (Box a) => a -> Put
+putBox2 x = putBox (getType x) (encodeBody x)
 
 putBox :: BoxType -> BoxBody -> Put
 putBox boxType body = do
@@ -21,6 +24,11 @@ putBox boxType body = do
         boxSize  =
           let size = typeSize + bodySize
           in if size < 0x100000000; then size; else size + 8
+
+getBox2 :: (Box a) => Get a
+getBox2 = do
+  (t, b) <- getBox
+  return $ decodeBody t b
 
 getBox :: Get (BoxType, BoxBody)
 getBox = do
