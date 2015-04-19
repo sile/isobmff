@@ -185,10 +185,12 @@ getBoxImpl = do
       _ -> getLazyByteString $ (fromIntegral boxSize) - (beforeBodyPos - startPos)
   return $ (boxType, body)
 
+-- TODO: null or eos
 getStringNul :: Get String
-getStringNul = Char8L.unpack <$> getLazyByteStringNul
+-- getStringNul = Char8L.unpack <$> getLazyByteStringNul
+getStringNul = Char8L.unpack <$> getRemainingLazyByteString2
 
 putStringNul :: String -> Put
 putStringNul s = do
   put $ Char8.pack s
-  putWord8 0
+--  putWord8 0

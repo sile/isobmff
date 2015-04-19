@@ -15,6 +15,10 @@ import Codec.ISOBMFF.Box.MediaInformationBox as MediaInformationBox
 import Codec.ISOBMFF.Box.VideoMediaHeaderBox as VideoMediaHeaderBox
 import Codec.ISOBMFF.Box.SoundMediaHeaderBox as SoundMediaHeaderBox
 import Codec.ISOBMFF.Box.DataInformationBox as DataInformationBox
+import Codec.ISOBMFF.Box.MovieFragmentBox as MovieFragmentBox
+import Codec.ISOBMFF.Box.MovieFragmentHeaderBox as MovieFragmentHeaderBox
+import Codec.ISOBMFF.Box.TrackFragmentBox as TrackFragmentBox
+import Codec.ISOBMFF.Box.TrackFragmentHeaderBox as TrackFragmentHeaderBox
 import Data.Binary.Get (Get)
 
 data StdBox = Unknown UnknownBox
@@ -33,6 +37,10 @@ data StdBox = Unknown UnknownBox
             | Vmhd VideoMediaHeaderBox.VideoMediaHeaderBox
             | Smhd SoundMediaHeaderBox.SoundMediaHeaderBox
             | Dinf DataInformationBox.DataInformationBox
+            | Moof MovieFragmentBox.MovieFragmentBox
+            | Mfhd MovieFragmentHeaderBox.MovieFragmentHeaderBox
+            | Traf TrackFragmentBox.TrackFragmentBox
+            | Tfhd TrackFragmentHeaderBox.TrackFragmentHeaderBox
              deriving (Show)
 
 data AnyBox = forall a . (Box a) => AnyBox a
@@ -58,6 +66,10 @@ getAnyBox (Minf x) = AnyBox x
 getAnyBox (Vmhd x) = AnyBox x
 getAnyBox (Smhd x) = AnyBox x
 getAnyBox (Dinf x) = AnyBox x
+getAnyBox (Moof x) = AnyBox x
+getAnyBox (Mfhd x) = AnyBox x
+getAnyBox (Traf x) = AnyBox x
+getAnyBox (Tfhd x) = AnyBox x
 getAnyBox (Unknown x) = AnyBox x
 
 instance Box StdBox where
@@ -78,6 +90,10 @@ instance Box StdBox where
   decodeBody t @ "vmhd" = decodeBody2 t Vmhd
   decodeBody t @ "smhd" = decodeBody2 t Smhd
   decodeBody t @ "dinf" = decodeBody2 t Dinf
+  decodeBody t @ "moof" = decodeBody2 t Moof
+  decodeBody t @ "mfhd" = decodeBody2 t Mfhd
+  decodeBody t @ "traf" = decodeBody2 t Traf
+  decodeBody t @ "tfhd" = decodeBody2 t Tfhd
   decodeBody t          = decodeBody2 t Unknown
 
 decodeBody2 :: (Box a) => BoxType -> (a -> StdBox) -> Get StdBox

@@ -1,4 +1,4 @@
 ISOBMFF
 =======
 
-An ISO Base Media File Format encoder/decoder
+An ISO Base Media File Format encoder/decoder (experimental)
